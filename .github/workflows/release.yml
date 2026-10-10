@@ -13,7 +13,8 @@ jobs:
         run: |
           zip -r "PageMT-${GITHUB_REF_NAME}.zip" manifest.json background.js content.js content.css lib popup icons LICENSE README.md
       - name: Create release & upload asset
-        uses: softprops/action-gh-release@v2
-        with:
-          files: PageMT-*.zip
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "PageMT-${GITHUB_REF_NAME}.zip" --generate-notes --title "$GITHUB_REF_NAME" \
+            || gh release upload "$GITHUB_REF_NAME" "PageMT-${GITHUB_REF_NAME}.zip" --clobber
