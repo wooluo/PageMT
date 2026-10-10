@@ -107,6 +107,7 @@ function restoreAll() {
     if (node.isConnected) node.nodeValue = text;
   }
   originals = [];
+  translatedNodes = new WeakSet(); // must reset, or re-translate partials get skipped
   document.querySelectorAll("[data-pagemt='1']").forEach((el) => {
     el.removeAttribute("data-pagemt");
     el.removeAttribute("title");

@@ -126,6 +126,9 @@ async function translatePage(tabId) {
   const settings = await getSettings();
   const started = Date.now();
   try {
+    // 0. restore any previous translation so re-translate (e.g. new target
+    //    language) collects the ORIGINAL text, not the already-translated one.
+    await chrome.tabs.sendMessage(tabId, { type: "MT_RESTORE" }).catch(() => {});
     // 1. collect text nodes
     const [{ result: collected }] = await chrome.scripting.executeScript({
       target: { tabId },
