@@ -1,0 +1,19 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package zip
+        run: |
+          zip -r "PageMT-${GITHUB_REF_NAME}.zip" manifest.json background.js content.js content.css lib popup icons LICENSE README.md
+      - name: Create release & upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PageMT-*.zip
+          generate_release_notes: true
