@@ -62,15 +62,25 @@ function makeBatches(segments, settings) {
   return batches;
 }
 
+// Clean model output: strip reasoning tags, code fences, and any leading instruction echo.
+function cleanOutput(out) {
+  let t = String(out);
+  t = t.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  t = t.replace(/^```[a-zA-Z]*\n?|```$/g, "");
+  t = t.trim();
+  return t;
+}
+
 async function translateBatch(settings, segments, signal) {
   const prompt = buildPrompt(segments, settings.sourceLang, settings.targetLang);
-  const out = await chatComplete(settings, prompt, signal);
+  const out = cleanOutput(await chatComplete(settings, prompt, signal));
   let parts = out.split(SEP).map((t) => t.trim());
   if (parts.length !== segments.length) {
     // Model dropped/messed delimiters — fall back to per-segment requests.
     console.warn(`PageMT: delimiter mismatch (${parts.length}/${segments.length}), falling back`);
     parts = await Promise.all(
-      segments.map((s) => chatComplete(settings, buildSinglePrompt(s, settings.sourceLang, settings.targetLang), signal))
+      segments.map((s) => chatComplete(settings, buildSinglePrompt(s, settings.sourceLang, settings.targetLang), signal)
+        .then(cleanOutput))
     );
   }
   // Never return empties: keep original on failure
@@ -124,6 +134,8 @@ async function translatePage(tabId) {
           total,
           phase: "translating",
         }).catch(() => {});
+      } catch (e) {
+        console.warn("PageMT batch failed:", e);
       } finally {
         clearTimeout(timer);
       }
@@ -157,7 +169,6 @@ function collectNodes() {
     let el = t.parentElement;
     if (!el || SKIP.has(el.tagName)) continue;
     if (!el.offsetParent && el.tagName !== "BODY") continue; // not visible
-    // only leaf-ish text nodes: parent has no nested block element holding text
     if (el.closest("[data-pagemt='1']")) continue;
     nodes.push({ nodeId: nodes.length, text });
   }
