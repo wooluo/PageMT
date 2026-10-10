@@ -15,22 +15,40 @@ async function getSettings() {
 
 // ---- LM Studio client ----
 
-async function chatComplete(settings, prompt, signal) {
+async function chatComplete(settings, prompt, signal, timeoutMs = 120_000) {
   const url = settings.baseUrl.replace(/\/+$/, "") + "/v1/chat/completions";
   const headers = { "Content-Type": "application/json" };
   if (settings.apiKey) headers["Authorization"] = "Bearer " + settings.apiKey;
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    signal,
-    body: JSON.stringify({
-      model: settings.model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: settings.temperature,
-      max_tokens: 4096,
-      stream: false,
-    }),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const onOuterAbort = () => ctrl.abort();
+  if (signal) {
+    if (signal.aborted) ctrl.abort();
+    else signal.addEventListener("abort", onOuterAbort);
+  }
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers,
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: settings.temperature,
+        max_tokens: 4096,
+        stream: false,
+      }),
+    });
+  } catch (e) {
+    if (ctrl.signal.aborted && (!signal || !signal.aborted)) {
+      throw new Error(`连接超时（${Math.round(timeoutMs / 1000)}s）：检查 baseUrl 是否可达、LM Studio 是否已 Start Server`);
+    }
+    throw new Error(`无法连接 ${url}：${e.message}（检查 LM Studio 是否已启动、地址/端口是否正确）`);
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", onOuterAbort);
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`LM Studio ${res.status}: ${body.slice(0, 200)}`);
@@ -42,7 +60,7 @@ async function chatComplete(settings, prompt, signal) {
 }
 
 async function testConnection(settings) {
-  const out = await chatComplete(settings, buildSinglePrompt("Hello", "English", "Chinese (Simplified)"));
+  const out = await chatComplete(settings, buildSinglePrompt("Hello", "English", "Chinese (Simplified)"), null, 10_000);
   return { ok: true, sample: out.slice(0, 100) };
 }
 
