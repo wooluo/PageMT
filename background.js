@@ -148,6 +148,12 @@ async function translatePage(tabId) {
         const translated = await translateBatch(settings, batch, controller.signal);
         batch.forEach((s, i) => transMap.set(s, translated[i]));
         done += batch.length;
+        // Incremental render: flush this batch to the page immediately.
+        await chrome.tabs.sendMessage(tabId, {
+          type: "MT_APPLY_PARTIAL",
+          map: batch.map((s, i) => [s, translated[i]]),
+          showOriginal: settings.showOriginal,
+        }).catch(() => {});
         await chrome.tabs.sendMessage(tabId, {
           type: "MT_STATUS",
           done: Math.min(done, total),
@@ -165,9 +171,7 @@ async function translatePage(tabId) {
       await chrome.tabs.sendMessage(tabId, { type: "MT_STATUS", phase: "idle" }).catch(() => {});
       return { ok: false, error: "已取消" };
     }
-
-    // 3. apply
-    await chrome.tabs.sendMessage(tabId, { type: "MT_APPLY", map: [...transMap], showOriginal: settings.showOriginal });
+    // 3. done — partial applies already flushed everything; just report.
     return { ok: true, total, seconds: ((Date.now() - started) / 1000).toFixed(1) };
   } catch (e) {
     return { ok: false, error: String(e.message || e) };

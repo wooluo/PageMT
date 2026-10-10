@@ -2,6 +2,7 @@
 // Applies translations to text nodes; keeps originals for restore.
 
 let originals = []; // {node, text}
+let translatedNodes = new WeakSet(); // per-text-node idempotency (sibling-safe)
 let statusEl = null;
 
 function ensureStatusBar() {
@@ -32,6 +33,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ ok: true });
     return;
   }
+  if (msg.type === "MT_APPLY_PARTIAL") {
+    try {
+      applyPartial(new Map(msg.map), msg.showOriginal);
+      sendResponse({ ok: true });
+    } catch (e) {
+      sendResponse({ ok: false, error: String(e) });
+    }
+    return;
+  }
   if (msg.type === "MT_APPLY") {
     try {
       applyTranslations(new Map(msg.map), msg.showOriginal);
@@ -46,6 +56,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ ok: true });
   }
 });
+
+// Incremental apply: patch only the segments in this batch. Idempotent —
+// already-translated nodes are skipped because their current text differs from the map key.
+function applyPartial(map, showOriginal) {
+  const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT", "CODE", "PRE", "SVG", "IFRAME", "CANVAS"]);
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let t;
+  while ((t = walker.nextNode())) {
+    const text = t.nodeValue.replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const el = t.parentElement;
+    if (!el || SKIP.has(el.tagName)) continue;
+    if (!el.offsetParent && el.tagName !== "BODY") continue;
+    if (translatedNodes.has(t)) continue; // already translated
+    const translated = map.get(text);
+    if (!translated || translated === text) continue;
+    originals.push({ node: t, text: t.nodeValue });
+    translatedNodes.add(t);
+    if (showOriginal) el.setAttribute("title", t.nodeValue.trim());
+    el.setAttribute("data-pagemt", "1");
+    t.nodeValue = translated;
+  }
+}
 
 function applyTranslations(map, showOriginal) {
   originals = [];
