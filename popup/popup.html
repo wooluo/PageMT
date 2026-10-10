@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 320px; padding: 14px; font: 14px/1.5 system-ui, sans-serif; background: #fafafa; color: #222; }
+  h1 { font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  h1 img { width: 20px; height: 20px; }
+  label { display: block; font-size: 12px; color: #666; margin: 8px 0 3px; }
+  select, input[type=text], input[type=number] { width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; background: #fff; }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+  .btns { display: flex; gap: 8px; margin-top: 12px; }
+  button { flex: 1; padding: 8px 0; border: 0; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  #translate { background: #2563eb; color: #fff; }
+  #translate:disabled { background: #93c5fd; cursor: not-allowed; }
+  #restore { background: #e5e7eb; color: #374151; }
+  #cancel { background: #fee2e2; color: #b91c1c; display: none; }
+  #msg { margin-top: 10px; font-size: 12px; min-height: 16px; }
+  #msg.ok { color: #16a34a; }
+  #msg.err { color: #dc2626; }
+  details { margin-top: 10px; font-size: 12px; }
+  summary { cursor: pointer; color: #666; }
+  .hint { font-size: 11px; color: #999; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <h1><img src="../icons/icon48.png" alt="">PageMT 全页翻译</h1>
+
+  <div class="row">
+    <div>
+      <label>源语言</label>
+      <select id="sourceLang"></select>
+    </div>
+    <div>
+      <label>目标语言</label>
+      <select id="targetLang"></select>
+    </div>
+  </div>
+
+  <div class="btns">
+    <button id="translate">翻译本页</button>
+    <button id="cancel">取消</button>
+    <button id="restore">还原</button>
+  </div>
+  <div id="msg"></div>
+
+  <details>
+    <summary>LM Studio 设置</summary>
+    <label>服务地址</label>
+    <input type="text" id="baseUrl" placeholder="http://localhost:1234">
+    <label>模型名</label>
+    <input type="text" id="model" placeholder="hy-mt2-1.8b-mlx">
+    <label>API Key（可选）</label>
+    <input type="text" id="apiKey" placeholder="留空">
+    <div class="row">
+      <div><label>并发数</label><input type="number" id="concurrency" min="1" max="16"></div>
+      <div><label>批量段数</label><input type="number" id="batchSize" min="1" max="32"></div>
+    </div>
+    <label><input type="checkbox" id="showOriginal"> 鼠标悬停显示原文</label>
+    <button id="test" style="background:#eef2ff;color:#4338ca;margin-top:8px;width:100%">测试连接</button>
+    <p class="hint">需在 LM Studio 启动本地服务器（Developer → Start Server），并加载 hy-mt2-1.8b-mlx 模型。</p>
+  </details>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
