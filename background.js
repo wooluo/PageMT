@@ -28,6 +28,8 @@ async function chatComplete(settings, prompt, signal, timeoutMs = 120_000) {
   }
   let res;
   try {
+    // Estimate output tokens: prompt chars/2 + 40% headroom for translation expansion.
+    const estTokens = Math.min(16384, Math.ceil((prompt.length / 2) * 1.4) + 256);
     res = await fetch(url, {
       method: "POST",
       headers,
@@ -36,7 +38,7 @@ async function chatComplete(settings, prompt, signal, timeoutMs = 120_000) {
         model: settings.model,
         messages: [{ role: "user", content: prompt }],
         temperature: settings.temperature,
-        max_tokens: 4096,
+        max_tokens: Math.max(4096, estTokens),
         stream: false,
       }),
     });

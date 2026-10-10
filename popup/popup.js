@@ -39,8 +39,8 @@ async function saveSettings() {
     apiKey: $("apiKey").value.trim(),
     sourceLang: $("sourceLang").value,
     targetLang: $("targetLang").value,
-    concurrency: Math.max(1, Math.min(16, +$("concurrency").value || 4)),
-    batchSize: Math.max(1, Math.min(32, +$("batchSize").value || 12)),
+    concurrency: Math.max(1, Math.min(16, +$("concurrency").value || 6)),
+    batchSize: Math.max(1, Math.min(64, +$("batchSize").value || 24)),
     showOriginal: $("showOriginal").checked,
   };
   await chrome.storage.local.set({ settings: s });
